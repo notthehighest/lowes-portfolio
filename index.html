@@ -23,7 +23,7 @@
     --mono: 'Space Mono', monospace;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
-  html{scroll-behavior:smooth;}
+  html{scroll-behavior:smooth; scroll-padding-top:64px;}
   body{
     background:var(--cream);
     color:var(--ink);
@@ -157,35 +157,98 @@
   .nav-drop-menu a::after{display:none;}
 
   @media (max-width: 820px){
-    .nav-drop-menu{
-      position:static; transform:none; opacity:1; visibility:visible;
-      box-shadow:none; border:none; min-width:0; padding:0;
-      display:none; background:rgba(244,196,48,0.06);
-    }
-    .nav-drop.mobile-open .nav-drop-menu{display:block;}
-    .nav-drop-trigger{
-      width:100%; padding:14px 5vw; opacity:1;
-      justify-content:space-between; border-bottom:1px solid var(--line);
-    }
-    .nav-drop-menu a{padding:12px 5vw 12px 9vw; border-bottom:1px solid var(--line);}
-  }
 
-  @media (max-width: 820px){
-    .nav-links{
-      position:fixed; top:58px; right:0; left:0;
-      flex-direction:column; gap:0;
-      background:var(--cream);
-      border-bottom:1px solid var(--line);
-      max-height:0; overflow:hidden;
-      transition:max-height 0.3s ease;
-    }
-    .nav-links.open{max-height:400px;}
-    .nav-links a{padding:14px 5vw; opacity:1; border-bottom:1px solid var(--line);}
+    /* ── Hamburger button ── */
     .nav-toggle{
       display:block; background:none; border:none;
-      font-family:var(--mono); font-size:1.3rem; color:var(--navy);
-      cursor:pointer;
+      font-family:var(--mono); font-size:1.3rem;
+      color:var(--navy); cursor:pointer; padding:4px 6px;
     }
+
+    /* ── Slide-down menu panel ── */
+    .nav-links{
+      position:fixed; top:57px; left:0; right:0;
+      flex-direction:column; gap:0;
+      background:var(--cream);
+      border-bottom:2px solid var(--line);
+      max-height:0; overflow:hidden;
+      transition:max-height 0.35s cubic-bezier(0.4,0,0.2,1);
+    }
+    .nav-links.open{ max-height:800px; }
+
+    /* ── Top-level direct links ── */
+    .nav-links > a{
+      display:block !important;
+      padding:15px 6vw;
+      font-family:var(--mono); font-size:0.78rem;
+      letter-spacing:0.1em; text-transform:uppercase;
+      color:var(--navy) !important; opacity:1 !important;
+      border-bottom:1px solid var(--line);
+    }
+    /* kill desktop underline animation on mobile */
+    .nav-links > a::after{ display:none; }
+
+    /* ── Dropdown trigger row ── */
+    .nav-drop-trigger{
+      width:100%; padding:15px 6vw;
+      font-size:0.78rem; letter-spacing:0.1em;
+      color:var(--navy) !important; opacity:1 !important;
+      background:transparent;
+      justify-content:space-between;
+      border-bottom:1px solid var(--line);
+    }
+    .nav-drop-trigger::after{ display:none; }
+    .nav-drop-trigger .caret{
+      transition:transform 0.3s ease;
+      font-size:0.65rem;
+    }
+    .nav-drop.mobile-open > .nav-drop-trigger{
+      color:var(--blue) !important;
+      background:rgba(244,196,48,0.07);
+    }
+    .nav-drop.mobile-open > .nav-drop-trigger .caret{
+      transform:rotate(180deg);
+    }
+
+    /* ── Dropdown sub-menu (max-height slide, no display toggle) ── */
+    .nav-drop-menu{
+      /* reset desktop absolute positioning */
+      position:static !important;
+      transform:none !important;
+      left:auto !important;
+      top:auto !important;
+      /* hide via max-height so it animates in */
+      max-height:0 !important;
+      overflow:hidden !important;
+      opacity:1 !important;
+      visibility:visible !important;
+      /* style */
+      background:rgba(244,196,48,0.08);
+      border-left:3px solid var(--yellow);
+      margin-left:6vw;
+      box-shadow:none;
+      border-top:none;
+      transition:max-height 0.3s cubic-bezier(0.4,0,0.2,1) !important;
+    }
+    .nav-drop.mobile-open > .nav-drop-menu{
+      max-height:300px !important;
+    }
+
+    /* ── Sub-menu links ── */
+    .nav-drop-menu a{
+      display:block !important;
+      padding:13px 6vw 13px 8vw !important;
+      border-bottom:1px solid var(--line) !important;
+      color:var(--navy) !important;
+      opacity:1 !important;
+      font-family:var(--mono) !important;
+      font-size:0.72rem !important;
+      letter-spacing:0.08em !important;
+      text-transform:uppercase !important;
+      background:transparent !important;
+    }
+    .nav-drop-menu a::after{ display:none !important; }
+    .nav-drop-menu a:last-child{ border-bottom:none !important; }
   }
 
   section{
@@ -1207,13 +1270,36 @@
 <script>
   const toggle = document.getElementById('navToggle');
   const links = document.getElementById('navLinks');
-  toggle.addEventListener('click', () => links.classList.toggle('open'));
-  links.querySelectorAll('.nav-drop-menu a').forEach(a => a.addEventListener('click', () => {
-    links.classList.remove('open');
-    links.querySelectorAll('.nav-drop').forEach(d => d.classList.remove('mobile-open'));
-  }));
-  links.querySelectorAll(':scope > a').forEach(a => a.addEventListener('click', () => links.classList.remove('open')));
 
+  /* ── Hamburger toggle ── */
+  toggle.addEventListener('click', () => links.classList.toggle('open'));
+
+  /* ── Close nav + smooth scroll helper ── */
+  function closeAndScroll(href) {
+    const isMobile = window.innerWidth <= 820;
+    links.classList.remove('open');
+    document.querySelectorAll('.nav-drop').forEach(d => d.classList.remove('mobile-open'));
+
+    if (!href || !href.startsWith('#')) return;
+    const target = document.querySelector(href);
+    if (!target) return;
+
+    /* On mobile, wait for menu close animation before scrolling */
+    const delay = isMobile ? 320 : 0;
+    setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, delay);
+  }
+
+  /* ── All anchor links inside the nav ── */
+  links.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      closeAndScroll(a.getAttribute('href'));
+    });
+  });
+
+  /* ── Dropdown triggers (mobile: toggle sub-menu) ── */
   document.querySelectorAll('.nav-drop-trigger').forEach(trigger => {
     trigger.addEventListener('click', (e) => {
       if (window.innerWidth <= 820) {
